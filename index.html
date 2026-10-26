@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Game Hub</title>
+		<!-- keeps search engines from listing the site -->
+		<meta name="robots" content="noindex" />
+		<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>" />
+		<link rel="stylesheet" href="css/style.css" />
+	</head>
+	<body>
+		<header class="top">
+			<a class="brand" href="./">🎮 Game Hub</a>
+			<nav>
+				<button class="tab active" data-tab="games">Games</button>
+				<button class="tab" data-tab="browse">Browse</button>
+				<button class="tab" data-tab="settings">Settings</button>
+			</nav>
+		</header>
+
+		<main>
+			<section id="tab-games" class="panel active">
+				<input id="game-search" class="search" type="search" placeholder="Search games…" autocomplete="off" />
+				<h2>Play right here</h2>
+				<p class="hint">These games are part of this site, so they work even when the proxy server is down.</p>
+				<div id="local-games" class="grid"></div>
+				<h2>Web games (through the proxy)</h2>
+				<p class="hint">These open other websites through Scramjet. Some may load slowly or not work.</p>
+				<div id="web-games" class="grid"></div>
+			</section>
+
+			<section id="tab-browse" class="panel">
+				<form id="browse-form" class="browse">
+					<input id="browse-input" class="search" type="text" placeholder="Type a website or search" autocomplete="off" />
+					<button type="submit">Go</button>
+				</form>
+				<p class="hint">Pages open through Scramjet v2, using the server set in Settings.</p>
+			</section>
+
+			<section id="tab-settings" class="panel">
+				<form id="settings-form" class="settings">
+					<label>
+						Wisp server
+						<input name="wisp" type="text" spellcheck="false" />
+						<small>Must start with wss:// (or ws:// for testing). The default is a public demo server and is rate limited.</small>
+					</label>
+					<label>
+						Transport
+						<select name="transport">
+							<option value="libcurl">libcurl (default)</option>
+							<option value="epoxy">epoxy</option>
+						</select>
+					</label>
+					<label>
+						Search engine
+						<input name="searchEngine" type="text" spellcheck="false" />
+						<small>%s is replaced by what you type.</small>
+					</label>
+					<div class="row">
+						<button type="submit">Save</button>
+						<button type="button" id="settings-reset" class="secondary">Reset</button>
+					</div>
+					<p id="settings-status" class="hint"></p>
+				</form>
+			</section>
+		</main>
+
+		<div id="viewer" class="viewer" hidden>
+			<div class="toolbar">
+				<button id="v-close" title="Close">✕</button>
+				<button id="v-back" title="Back">←</button>
+				<button id="v-forward" title="Forward">→</button>
+				<button id="v-reload" title="Reload">⟳</button>
+				<span id="v-url" class="url"></span>
+				<button id="v-full" title="Full screen">⛶</button>
+			</div>
+			<div class="frame-wrap">
+				<iframe id="v-frame" allow="fullscreen; autoplay; gamepad; clipboard-write"></iframe>
+				<div id="v-status" class="status" hidden></div>
+			</div>
+		</div>
+
+		<footer>
+			Proxy powered by <a href="https://github.com/MercuryWorkshop/scramjet" target="_blank" rel="noopener">Scramjet</a> (AGPL-3.0) ·
+			<a href="credits.html">Credits</a>
+		</footer>
+
+		<script src="js/proxy.js"></script>
+		<script src="js/games.js"></script>
+		<script src="js/app.js"></script>
+	</body>
+</html>
