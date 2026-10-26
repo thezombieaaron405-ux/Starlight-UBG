@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Flappy Block</title>
+		<link rel="stylesheet" href="game.css" />
+	</head>
+	<body>
+		<div class="hud">Score: <b id="score">0</b> · Best: <b id="best">0</b></div>
+		<canvas id="c" width="360" height="520"></canvas>
+		<p class="help">Space, click, or tap to flap.</p>
+		<script>
+			const c = document.getElementById("c");
+			const ctx = c.getContext("2d");
+			const GAP = 140;
+			const PIPE_W = 56;
+			const SPEED = 2.4;
+			let bird, pipes, score, state, frameCount;
+			let best = +(localStorage.getItem("flappy-best") || 0);
+			document.getElementById("best").textContent = best;
+
+			function reset() {
+				bird = { x: 80, y: c.height / 2, vy: 0, size: 22 };
+				pipes = [];
+				score = 0;
+				frameCount = 0;
+				document.getElementById("score").textContent = 0;
+				state = "ready";
+			}
+
+			function flap() {
+				if (state === "over") {
+					reset();
+					return;
+				}
+				state = "playing";
+				bird.vy = -6.6;
+			}
+
+			function update() {
+				if (state !== "playing") return;
+				frameCount++;
+				bird.vy += 0.38;
+				bird.y += bird.vy;
+
+				if (frameCount % 95 === 1) {
+					const top = 60 + Math.random() * (c.height - GAP - 120);
+					pipes.push({ x: c.width, top, passed: false });
+				}
+				for (const p of pipes) {
+					p.x -= SPEED;
+					if (!p.passed && p.x + PIPE_W < bird.x) {
+						p.passed = true;
+						score++;
+						document.getElementById("score").textContent = score;
+					}
+					const inX = bird.x + bird.size > p.x && bird.x < p.x + PIPE_W;
+					const inGap = bird.y > p.top && bird.y + bird.size < p.top + GAP;
+					if (inX && !inGap) end();
+				}
+				pipes = pipes.filter((p) => p.x + PIPE_W > 0);
+				if (bird.y + bird.size > c.height || bird.y < 0) end();
+			}
+
+			function end() {
+				state = "over";
+				if (score > best) {
+					best = score;
+					localStorage.setItem("flappy-best", best);
+					document.getElementById("best").textContent = best;
+				}
+			}
+
+			function draw() {
+				ctx.fillStyle = "#14193a";
+				ctx.fillRect(0, 0, c.width, c.height);
+				ctx.fillStyle = "#3ecf5a";
+				for (const p of pipes) {
+					ctx.fillRect(p.x, 0, PIPE_W, p.top);
+					ctx.fillRect(p.x, p.top + GAP, PIPE_W, c.height - p.top - GAP);
+				}
+				ctx.fillStyle = "#ffd23f";
+				ctx.fillRect(bird.x, bird.y, bird.size, bird.size);
+
+				let text = null;
+				if (state === "ready") text = "Tap to start";
+				if (state === "over") text = "Game over · tap to retry";
+				if (text) {
+					ctx.fillStyle = "#fff";
+					ctx.font = "bold 22px system-ui";
+					ctx.textAlign = "center";
+					ctx.fillText(text, c.width / 2, c.height / 2 - 60);
+				}
+			}
+
+			function loop() {
+				update();
+				draw();
+				requestAnimationFrame(loop);
+			}
+
+			addEventListener("keydown", (e) => {
+				if (e.key === " " || e.key === "ArrowUp") {
+					e.preventDefault();
+					flap();
+				}
+			});
+			c.addEventListener("pointerdown", flap);
+
+			reset();
+			loop();
+		</script>
+	</body>
+</html>

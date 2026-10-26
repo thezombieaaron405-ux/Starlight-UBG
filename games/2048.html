@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>2048</title>
+		<link rel="stylesheet" href="game.css" />
+		<style>
+			.board {
+				display: grid;
+				grid-template-columns: repeat(4, 1fr);
+				gap: 10px;
+				padding: 10px;
+				width: min(90vw, 420px);
+				aspect-ratio: 1;
+				background: #20253d;
+				border-radius: 12px;
+				box-sizing: border-box;
+				touch-action: none;
+			}
+			.cell {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				border-radius: 8px;
+				background: #2a3050;
+				font-weight: 800;
+				font-size: clamp(18px, 6vw, 34px);
+			}
+			button {
+				font: inherit;
+				border: 0;
+				border-radius: 8px;
+				padding: 8px 14px;
+				background: #7c5cff;
+				color: #fff;
+				cursor: pointer;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="hud">Score: <b id="score">0</b> · Best: <b id="best">0</b> <button id="new">New game</button></div>
+		<div class="board" id="board"></div>
+		<p class="help" id="msg">Arrow keys / WASD or swipe to slide the tiles.</p>
+		<script>
+			const COLORS = {
+				2: "#3b4370", 4: "#45508a", 8: "#f08c4a", 16: "#f57345", 32: "#f65c4b",
+				64: "#f63e2f", 128: "#e8c95c", 256: "#e8c54a", 512: "#e8c13a",
+				1024: "#e6bc2b", 2048: "#e6b81b",
+			};
+			const boardEl = document.getElementById("board");
+			let grid, score;
+			let best = +(localStorage.getItem("2048-best") || 0);
+			document.getElementById("best").textContent = best;
+
+			for (let i = 0; i < 16; i++) {
+				const d = document.createElement("div");
+				d.className = "cell";
+				boardEl.appendChild(d);
+			}
+
+			function newGame() {
+				grid = Array(16).fill(0);
+				score = 0;
+				addTile();
+				addTile();
+				render("Arrow keys / WASD or swipe to slide the tiles.");
+			}
+
+			function addTile() {
+				const empty = grid.map((v, i) => (v ? -1 : i)).filter((i) => i >= 0);
+				if (!empty.length) return;
+				grid[empty[Math.floor(Math.random() * empty.length)]] = Math.random() < 0.9 ? 2 : 4;
+			}
+
+			function render(message) {
+				[...boardEl.children].forEach((el, i) => {
+					const v = grid[i];
+					el.textContent = v || "";
+					el.style.background = v ? COLORS[v] || "#3c3a32" : "#2a3050";
+				});
+				document.getElementById("score").textContent = score;
+				if (score > best) {
+					best = score;
+					localStorage.setItem("2048-best", best);
+					document.getElementById("best").textContent = best;
+				}
+				if (message) document.getElementById("msg").textContent = message;
+			}
+
+			// Slides one row to the left and merges equal neighbors.
+			function slideRow(row) {
+				const nums = row.filter((v) => v);
+				for (let i = 0; i < nums.length - 1; i++) {
+					if (nums[i] === nums[i + 1]) {
+						nums[i] *= 2;
+						score += nums[i];
+						nums.splice(i + 1, 1);
+					}
+				}
+				while (nums.length < 4) nums.push(0);
+				return nums;
+			}
+
+			// dir: 0 left, 1 right, 2 up, 3 down
+			function move(dir) {
+				const before = grid.join();
+				for (let r = 0; r < 4; r++) {
+					const idx = [0, 1, 2, 3].map((k) => (dir < 2 ? r * 4 + k : k * 4 + r));
+					if (dir === 1 || dir === 3) idx.reverse();
+					const out = slideRow(idx.map((i) => grid[i]));
+					idx.forEach((i, k) => (grid[i] = out[k]));
+				}
+				if (grid.join() === before) return;
+				addTile();
+				let message = null;
+				if (grid.includes(2048)) message = "You made 2048! Keep going.";
+				if (!canMove()) message = "No moves left. Press New game.";
+				render(message);
+			}
+
+			function canMove() {
+				for (let i = 0; i < 16; i++) {
+					if (!grid[i]) return true;
+					if (i % 4 < 3 && grid[i] === grid[i + 1]) return true;
+					if (i < 12 && grid[i] === grid[i + 4]) return true;
+				}
+				return false;
+			}
+
+			addEventListener("keydown", (e) => {
+				const map = { arrowleft: 0, a: 0, arrowright: 1, d: 1, arrowup: 2, w: 2, arrowdown: 3, s: 3 };
+				const dir = map[e.key.toLowerCase()];
+				if (dir === undefined) return;
+				e.preventDefault();
+				move(dir);
+			});
+
+			let touch = null;
+			boardEl.addEventListener("touchstart", (e) => (touch = e.touches[0]), { passive: true });
+			boardEl.addEventListener("touchend", (e) => {
+				if (!touch) return;
+				const t = e.changedTouches[0];
+				const dx = t.clientX - touch.clientX;
+				const dy = t.clientY - touch.clientY;
+				if (Math.max(Math.abs(dx), Math.abs(dy)) > 25) {
+					if (Math.abs(dx) > Math.abs(dy)) move(dx < 0 ? 0 : 1);
+					else move(dy < 0 ? 2 : 3);
+				}
+				touch = null;
+			});
+			document.getElementById("new").addEventListener("click", newGame);
+
+			newGame();
+		</script>
+	</body>
+</html>

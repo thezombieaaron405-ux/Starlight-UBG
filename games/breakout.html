@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Breakout</title>
+		<link rel="stylesheet" href="game.css" />
+	</head>
+	<body>
+		<div class="hud">Score: <b id="score">0</b> · Lives: <b id="lives">3</b></div>
+		<canvas id="c" width="480" height="400"></canvas>
+		<p class="help">Move with the mouse, finger, or arrow keys. Click, tap, or Space to launch.</p>
+		<script>
+			const c = document.getElementById("c");
+			const ctx = c.getContext("2d");
+			const ROWS = 5;
+			const COLS = 8;
+			const BW = c.width / COLS;
+			const BH = 20;
+			const ROW_COLORS = ["#ff5c8a", "#f08c4a", "#ffd23f", "#3ecf5a", "#22d3ee"];
+			let paddle, ball, bricks, score, lives, state, keys = {};
+
+			function newGame() {
+				score = 0;
+				lives = 3;
+				bricks = [];
+				for (let r = 0; r < ROWS; r++)
+					for (let col = 0; col < COLS; col++)
+						bricks.push({ x: col * BW, y: 40 + r * BH, alive: true, color: ROW_COLORS[r] });
+				paddle = { x: c.width / 2 - 40, w: 80, h: 10, y: c.height - 24 };
+				resetBall();
+				updateHud();
+			}
+
+			function resetBall() {
+				ball = { x: paddle.x + paddle.w / 2, y: paddle.y - 8, vx: 0, vy: 0, r: 7 };
+				state = "ready";
+			}
+
+			function launch() {
+				if (state === "over" || state === "won") return newGame();
+				if (state !== "ready") return;
+				state = "playing";
+				ball.vx = 3 * (Math.random() < 0.5 ? -1 : 1);
+				ball.vy = -4;
+			}
+
+			function updateHud() {
+				document.getElementById("score").textContent = score;
+				document.getElementById("lives").textContent = lives;
+			}
+
+			function update() {
+				if (keys.ArrowLeft) paddle.x -= 7;
+				if (keys.ArrowRight) paddle.x += 7;
+				paddle.x = Math.max(0, Math.min(c.width - paddle.w, paddle.x));
+
+				if (state === "ready") {
+					ball.x = paddle.x + paddle.w / 2;
+					return;
+				}
+				if (state !== "playing") return;
+
+				ball.x += ball.vx;
+				ball.y += ball.vy;
+				if (ball.x < ball.r || ball.x > c.width - ball.r) ball.vx *= -1;
+				if (ball.y < ball.r) ball.vy *= -1;
+
+				if (
+					ball.vy > 0 &&
+					ball.y + ball.r >= paddle.y &&
+					ball.y + ball.r <= paddle.y + paddle.h + 6 &&
+					ball.x > paddle.x &&
+					ball.x < paddle.x + paddle.w
+				) {
+					// bounce angle depends on where the ball hits the paddle
+					const hit = (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
+					const speed = Math.hypot(ball.vx, ball.vy);
+					ball.vx = speed * hit * 0.9;
+					ball.vy = -Math.sqrt(speed * speed - ball.vx * ball.vx);
+				}
+
+				for (const b of bricks) {
+					if (!b.alive) continue;
+					if (ball.x > b.x && ball.x < b.x + BW && ball.y - ball.r < b.y + BH && ball.y + ball.r > b.y) {
+						b.alive = false;
+						ball.vy *= -1;
+						score += 10;
+						updateHud();
+						break;
+					}
+				}
+				if (bricks.every((b) => !b.alive)) state = "won";
+
+				if (ball.y > c.height + ball.r) {
+					lives--;
+					updateHud();
+					if (lives <= 0) state = "over";
+					else resetBall();
+				}
+			}
+
+			function draw() {
+				ctx.fillStyle = "#11152a";
+				ctx.fillRect(0, 0, c.width, c.height);
+				for (const b of bricks) {
+					if (!b.alive) continue;
+					ctx.fillStyle = b.color;
+					ctx.fillRect(b.x + 2, b.y + 2, BW - 4, BH - 4);
+				}
+				ctx.fillStyle = "#e8eaf6";
+				ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
+				ctx.beginPath();
+				ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+				ctx.fill();
+
+				let text = null;
+				if (state === "over") text = "Game over · click to restart";
+				if (state === "won") text = "You win! · click to play again";
+				if (text) {
+					ctx.fillStyle = "#fff";
+					ctx.font = "bold 22px system-ui";
+					ctx.textAlign = "center";
+					ctx.fillText(text, c.width / 2, c.height / 2 + 40);
+				}
+			}
+
+			function loop() {
+				update();
+				draw();
+				requestAnimationFrame(loop);
+			}
+
+			function pointTo(clientX) {
+				const rect = c.getBoundingClientRect();
+				const x = ((clientX - rect.left) / rect.width) * c.width;
+				paddle.x = x - paddle.w / 2;
+			}
+
+			c.addEventListener("mousemove", (e) => pointTo(e.clientX));
+			c.addEventListener("touchmove", (e) => pointTo(e.touches[0].clientX), { passive: true });
+			c.addEventListener("pointerdown", launch);
+			addEventListener("keydown", (e) => {
+				if (e.key === " ") {
+					e.preventDefault();
+					launch();
+				}
+				if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+					e.preventDefault();
+					keys[e.key] = true;
+				}
+			});
+			addEventListener("keyup", (e) => (keys[e.key] = false));
+
+			newGame();
+			loop();
+		</script>
+	</body>
+</html>
